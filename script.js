@@ -219,5 +219,20 @@ window.addEventListener("offline", () => {
   console.log("App is offline. Any new data will be saved locally.");
 });
 
+function updateOnlineStatus() {
+    const statusIndicator = document.getElementById("status-indicator");
+    if (navigator.onLine) {
+        statusIndicator.classList.remove("offline");
+        statusIndicator.classList.add("online");
+        showNotification("You are online", "success", 2000);
+    } else {
+        statusIndicator.classList.remove("online");
+        statusIndicator.classList.add("offline");
+        showNotification("You are offline. Data will sync when reconnected.", "error", 3000);
+    }
+}
 
+window.addEventListener("online", updateOnlineStatus);
+window.addEventListener("offline", updateOnlineStatus);
+updateOnlineStatus(); // Initial check
 
