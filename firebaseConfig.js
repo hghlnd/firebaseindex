@@ -3,7 +3,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebas
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
 import { getFirestore } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
-// Your Firebase configuration
+// Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyBFvIDR7rdC45TBAYVJQZHVSd55yXwlT88",
   authDomain: "indedfirebaseassignment.firebaseapp.com",
@@ -19,4 +19,9 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 
-console.log("Firebase initialized successfully");
+// Debugging initialization
+if (app) {
+  console.log("Firebase initialized successfully.");
+} else {
+  console.error("Firebase initialization failed.");
+}
