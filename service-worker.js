@@ -11,7 +11,7 @@ const urlsToCache = [
     '/install_app_icon.png'
 ];
 
-// Install event: Cache essential resources
+//  Cache essential resources
 self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
@@ -21,7 +21,7 @@ self.addEventListener('install', (event) => {
     console.log('Service Worker installed and resources cached');
 });
 
-// Fetch event: Serve cached files or fetch from network
+//  Serve cached files or fetch from network
 self.addEventListener('fetch', (event) => {
     event.respondWith(
         caches.match(event.request).then((response) => {
@@ -34,7 +34,7 @@ self.addEventListener('fetch', (event) => {
     );
 });
 
-// Activate event: Clean up old caches
+// Clean up old caches
 self.addEventListener('activate', (event) => {
     event.waitUntil(
         caches.keys().then((cacheNames) => {
@@ -50,10 +50,10 @@ self.addEventListener('activate', (event) => {
     console.log('Service Worker activated and old caches cleaned');
 });
 
-// Sync event (optional): Notify when online (basic awareness)
+//  Notify when online 
 self.addEventListener('sync', (event) => {
     if (event.tag === 'sync-data') {
         console.log('Sync event triggered: Data syncing placeholder');
-        // Placeholder for sync logic, like syncing IndexedDB to Firebase
+    
     }
 });
