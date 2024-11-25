@@ -18,7 +18,7 @@
 </head>
 <body>
     <div class="container">
-     // authentication section
+        <!-- Authentication Section -->
         <div id="auth-container">
             <!-- Sign In Form -->
             <form id="sign-in-form">
@@ -29,7 +29,7 @@
                 <p>Don't have an account? <span id="show-signup">Sign Up</span></p>
             </form>
 
-          // Sign Up Form
+            <!-- Sign Up Form -->
             <form id="sign-up-form" style="display: none;">
                 <h2>Sign Up</h2>
                 <input type="email" id="sign-up-email" placeholder="Email" required>
@@ -39,10 +39,10 @@
             </form>
         </div>
 
-        // Logout Button 
+        <!-- Logout Button -->
         <button id="logout-btn" style="display: none;">Logout</button>
 
-      // Main App Section 
+       
         <h1>Check Your Pockets</h1>
         <p>A simple app to help you keep track of your belongings.</p>
         <input type="text" id="itemInput" placeholder="Enter item name (e.g., Wallet)">
@@ -62,15 +62,14 @@
             <img src="install_app_icon.png" alt="Install App Icon" width="20" height="20"> Install App
         </button>
     </div>
-    <script src="auth.js" type="module"></script>
-    <script src="script.js"></script> 
 
-    <div id="notification-bar" style="display: none;"></div>
+    
+    <div id="notification-bar" aria-live="polite" style="display: none;"></div>
 
-   
     <div id="status-indicator" class="online"></div>
 
+
+    <script src="auth.js" type="module"></script>
+    <script src="script.js"></script>
 </body>
 </html>
-
-
