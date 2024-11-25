@@ -1,4 +1,4 @@
-const CACHE_NAME = 'check-your-pockets-cache-v4';
+const CACHE_NAME = 'check-your-pockets-cache-v3';
 const urlsToCache = [
     '/',
     '/index.html',
@@ -14,28 +14,26 @@ const urlsToCache = [
 ];
 
 // Cache essential resources
-self.addEventListener('install', (event) => {
+self.addEventListener('install', async (event) => {
     event.waitUntil(
-        caches.open(CACHE_NAME).then((cache) => {
-            return Promise.all(
-                urlsToCache.map((url) => {
-                    return fetch(url).then((response) => {
-                        if (response.ok) {
-                            cache.put(url, response.clone());
-                            console.log(`Cached: ${url}`);
-                        } else {
-                            console.warn(`Failed to cache ${url}: ${response.statusText}`);
+        (async () => {
+            const cache = await caches.open(CACHE_NAME);
+            try {
+                await Promise.all(
+                    urlsToCache.map(async (url) => {
+                        const response = await fetch(url);
+                        if (!response.ok) {
+                            throw new Error(Failed to fetch ${url}: ${response.status});
                         }
-                    }).catch((error) => {
-                        console.error(`Failed to fetch ${url}:`, error);
-                    });
-                })
-            );
-        }).then(() => {
-            console.log('All resources cached successfully');
-        }).catch((error) => {
-            console.error('Error during cache installation:', error);
-        })
+                        await cache.put(url, response.clone());
+                        console.log(Cached: ${url});
+                    })
+                );
+                console.log('All resources cached successfully');
+            } catch (error) {
+                console.error('Error caching resources:', error);
+            }
+        })()
     );
 });
 
@@ -43,16 +41,8 @@ self.addEventListener('install', (event) => {
 self.addEventListener('fetch', (event) => {
     event.respondWith(
         caches.match(event.request).then((response) => {
-            if (response) {
-                console.log(`Serving from cache: ${event.request.url}`);
-                return response;
-            }
-            return fetch(event.request).then((networkResponse) => {
-                console.log(`Fetched from network: ${event.request.url}`);
-                return networkResponse;
-            });
-        }).catch((error) => {
-            console.error(`Fetch failed for: ${event.request.url}`, error);
+            return response || fetch(event.request);
+        }).catch(() => {
             if (event.request.headers.get('accept')?.includes('text/html')) {
                 return caches.match('/index.html');
             }
@@ -67,33 +57,19 @@ self.addEventListener('activate', (event) => {
             return Promise.all(
                 cacheNames.map((cacheName) => {
                     if (cacheName !== CACHE_NAME) {
-                        console.log(`Deleting old cache: ${cacheName}`);
+                        console.log(Deleting old cache: ${cacheName});
                         return caches.delete(cacheName);
                     }
                 })
             );
-        }).then(() => {
-            console.log('Service Worker activated and old caches cleaned');
         })
     );
+    console.log('Service Worker activated and old caches cleaned');
 });
 
 // Sync offline data with Firebase
 self.addEventListener('sync', (event) => {
     if (event.tag === 'sync-data') {
-        event.waitUntil(syncDataToFirebase().catch((error) => {
-            console.error('Error during background sync:', error);
-        }));
+        event.waitUntil(syncDataToFirebase());
     }
 });
-
-// Utility function: Sync offline data
-async function syncDataToFirebase() {
-    console.log('Syncing offline data to Firebase...');
-    try {
-        // Placeholder logic for IndexedDB to Firebase sync
-        console.log('Data synced successfully!');
-    } catch (error) {
-        console.error('Failed to sync data to Firebase:', error);
-    }
-}
