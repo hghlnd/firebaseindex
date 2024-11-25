@@ -42,7 +42,7 @@
         <!-- Logout Button -->
         <button id="logout-btn" style="display: none;">Logout</button>
 
-       
+        <!-- Main App Section -->
         <h1>Check Your Pockets</h1>
         <p>A simple app to help you keep track of your belongings.</p>
         <input type="text" id="itemInput" placeholder="Enter item name (e.g., Wallet)">
@@ -63,13 +63,14 @@
         </button>
     </div>
 
-    
     <div id="notification-bar" aria-live="polite" style="display: none;"></div>
-
     <div id="status-indicator" class="online"></div>
 
-<script src="firebaseConfig.js" type="module"></script>
+    <!-- Firebase Configuration -->
+    <script src="firebaseConfig.js" type="module"></script>
+    <!-- Authentication -->
     <script src="auth.js" type="module"></script>
-    <script src="script.js"></script>
+    <!-- Main Script -->
+    <script src="script.js" type="module"></script>
 </body>
 </html>
