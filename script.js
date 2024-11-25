@@ -54,6 +54,18 @@ onAuthStateChanged(auth, (user) => {
   }
 });
 
+// Show Notifications
+function showNotification(message, type = "success", duration = 3000) {
+    const notificationBar = document.getElementById("notification-bar");
+    notificationBar.textContent = message;
+    notificationBar.className = type; // Add 'success' or 'error' class
+    notificationBar.style.display = "block";
+
+    setTimeout(() => {
+        notificationBar.style.display = "none";
+    }, duration);
+}
+
 // Sign-up
 document.getElementById("sign-up-btn").addEventListener("click", async () => {
   const email = document.getElementById("sign-up-email").value.trim();
@@ -175,11 +187,11 @@ function displayItems() {
 // Synchronize IndexedDB Data with Firebase
 async function syncDataToFirebase() {
   console.log("Syncing unsynced data to Firebase...");
-  const unsyncedItems = await getFromIndexedDB();
+  try {
+    const unsyncedItems = await getFromIndexedDB();
 
-  for (const item of unsyncedItems) {
-    if (!item.synced) {
-      try {
+    for (const item of unsyncedItems) {
+      if (!item.synced) {
         const docRef = await addDoc(itemsCollection, { name: item.name });
         console.log("Item synced to Firebase:", docRef.id);
 
@@ -187,14 +199,14 @@ async function syncDataToFirebase() {
         item.synced = true;
         item.id = docRef.id; // Use Firebase ID
         saveToIndexedDB(item);
-      } catch (error) {
-        console.error("Error syncing item to Firebase:", error);
       }
     }
-  }
 
-  // Load all items from Firebase into the app
-  await loadItemsFromFirestore();
+    showNotification("Offline data synced successfully!", "success");
+  } catch (error) {
+    console.error("Error syncing item to Firebase:", error);
+    showNotification("Failed to sync offline data.", "error");
+  }
 }
 
 // Load items from Firestore
@@ -235,4 +247,3 @@ function updateOnlineStatus() {
 window.addEventListener("online", updateOnlineStatus);
 window.addEventListener("offline", updateOnlineStatus);
 updateOnlineStatus(); // Initial check
-
