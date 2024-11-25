@@ -1,14 +1,8 @@
 // Import Firebase functions
-import { auth, db } from "./firebaseConfig.js";
-import { collection, addDoc, getDocs } from "firebase/firestore";
-import {
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signOut,
-  onAuthStateChanged,
-} from "firebase/auth";
+import { getFirestore, collection, addDoc, getDocs } from "firebase/firestore";
+import { auth, db } from "./firebaseConfig.js"; // Import from firebaseConfig.js
 
-// Firebase collections
+// Collection for items
 const itemsCollection = collection(db, "items");
 
 // Local app state for offline functionality
@@ -21,29 +15,11 @@ const signUpForm = document.getElementById("sign-up-form");
 const logoutBtn = document.getElementById("logout-btn");
 const appContainer = document.querySelector(".container");
 
-// Show or hide app based on authentication status
-onAuthStateChanged(auth, (user) => {
-  if (user) {
-    console.log(`User logged in: ${user.email}`);
-    appContainer.style.display = "block";
-    signInForm.style.display = "none";
-    signUpForm.style.display = "none";
-    logoutBtn.style.display = "block";
-    loadItemsFromFirestore();
-  } else {
-    console.log("User logged out");
-    appContainer.style.display = "none";
-    signInForm.style.display = "block";
-    signUpForm.style.display = "none";
-    logoutBtn.style.display = "none";
-  }
-});
-
 // Show Notifications
 function showNotification(message, type = "success", duration = 3000) {
   const notificationBar = document.getElementById("notification-bar");
   notificationBar.textContent = message;
-  notificationBar.className = type;
+  notificationBar.className = type; // Add 'success' or 'error' class
   notificationBar.style.display = "block";
 
   setTimeout(() => {
@@ -51,55 +27,17 @@ function showNotification(message, type = "success", duration = 3000) {
   }, duration);
 }
 
-// Sign-up
-document.getElementById("sign-up-btn").addEventListener("click", async () => {
-  const email = document.getElementById("sign-up-email").value.trim();
-  const password = document.getElementById("sign-up-password").value.trim();
-
-  try {
-    await createUserWithEmailAndPassword(auth, email, password);
-    showNotification("Sign-up successful! Please log in.", "success");
-    signInForm.style.display = "block";
-    signUpForm.style.display = "none";
-  } catch (error) {
-    showNotification(`Sign-up failed: ${error.message}`, "error");
-  }
-});
-
-// Sign-in
-document.getElementById("sign-in-btn").addEventListener("click", async () => {
-  const email = document.getElementById("sign-in-email").value.trim();
-  const password = document.getElementById("sign-in-password").value.trim();
-
-  try {
-    await signInWithEmailAndPassword(auth, email, password);
-    showNotification("Sign-in successful!", "success");
-  } catch (error) {
-    showNotification(`Sign-in failed: ${error.message}`, "error");
-  }
-});
-
-// Logout
-logoutBtn.addEventListener("click", async () => {
-  try {
-    await signOut(auth);
-    showNotification("Logged out successfully!", "success");
-  } catch (error) {
-    showNotification(`Logout failed: ${error.message}`, "error");
-  }
-});
-
 // Add item
-document.getElementById("addItemButton").addEventListener("click", async () => {
+document.getElementById("addItemButton").addEventListener("click", async function () {
   const itemInput = document.getElementById("itemInput");
   const itemName = itemInput.value.trim();
-
   if (itemName !== "") {
     const newItem = { id: Date.now(), name: itemName, synced: navigator.onLine };
 
     if (navigator.onLine) {
       try {
         const docRef = await addDoc(itemsCollection, { name: itemName });
+        console.log("Item saved to Firebase:", docRef.id);
         newItem.id = docRef.id;
         newItem.synced = true;
       } catch (error) {
@@ -107,6 +45,7 @@ document.getElementById("addItemButton").addEventListener("click", async () => {
         newItem.synced = false;
       }
     } else {
+      console.log("App is offline. Saving item locally.");
       newItem.synced = false;
     }
 
@@ -131,17 +70,63 @@ function displayItems() {
   });
 }
 
+// Synchronize IndexedDB Data with Firebase
+async function syncDataToFirebase() {
+  try {
+    const unsyncedItems = await getFromIndexedDB();
+
+    for (const item of unsyncedItems) {
+      if (!item.synced) {
+        const docRef = await addDoc(itemsCollection, { name: item.name });
+        console.log("Item synced to Firebase:", docRef.id);
+        item.synced = true;
+        item.id = docRef.id;
+        saveToIndexedDB(item);
+      }
+    }
+
+    showNotification("Offline data synced successfully!", "success");
+  } catch (error) {
+    console.error("Error syncing data to Firebase:", error);
+    showNotification("Failed to sync offline data.", "error");
+  }
+}
+
 // Load items from Firestore
 async function loadItemsFromFirestore() {
   try {
     const querySnapshot = await getDocs(itemsCollection);
     items = querySnapshot.docs.map((doc) => ({ id: doc.id, name: doc.data().name, synced: true }));
     displayItems();
+
+    // Save items to IndexedDB
+    for (const item of items) {
+      saveToIndexedDB(item);
+    }
   } catch (error) {
     console.error("Error loading items from Firestore:", error);
   }
 }
 
-// IndexedDB logic (as is)
-
+// Detect Online/Offline Status
 window.addEventListener("online", syncDataToFirebase);
+window.addEventListener("offline", () => {
+  console.log("App is offline. Any new data will be saved locally.");
+});
+
+function updateOnlineStatus() {
+  const statusIndicator = document.getElementById("status-indicator");
+  if (navigator.onLine) {
+    statusIndicator.classList.remove("offline");
+    statusIndicator.classList.add("online");
+    showNotification("You are online", "success", 2000);
+  } else {
+    statusIndicator.classList.remove("online");
+    statusIndicator.classList.add("offline");
+    showNotification("You are offline. Data will sync when reconnected.", "error", 3000);
+  }
+}
+
+window.addEventListener("online", updateOnlineStatus);
+window.addEventListener("offline", updateOnlineStatus);
+updateOnlineStatus(); // Initial check
