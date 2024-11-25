@@ -145,13 +145,16 @@ const getFromIndexedDB = () => {
 document.getElementById("addItemButton").addEventListener("click", async function () {
   const itemInput = document.getElementById("itemInput");
   const itemName = itemInput.value.trim();
+  console.log("Attempting to add item:", itemName); // Log item name
+
   if (itemName !== "") {
     const newItem = { id: Date.now(), name: itemName, synced: navigator.onLine };
+    console.log("Created new item object:", newItem); // Log new item
 
     if (navigator.onLine) {
       try {
         const docRef = await addDoc(itemsCollection, { name: itemName });
-        console.log("Item saved to Firebase:", docRef.id);
+        console.log("Item saved to Firebase with ID:", docRef.id);
         newItem.id = docRef.id;
         newItem.synced = true;
       } catch (error) {
@@ -164,7 +167,9 @@ document.getElementById("addItemButton").addEventListener("click", async functio
     }
 
     saveToIndexedDB(newItem);
+    console.log("Saved to IndexedDB:", newItem); // Confirm IndexedDB save
     items.push(newItem);
+    console.log("Updated items array:", items); // Verify items array update
     displayItems();
     itemInput.value = "";
   } else {
@@ -174,10 +179,12 @@ document.getElementById("addItemButton").addEventListener("click", async functio
 
 // Display items in the UI
 function displayItems() {
+  console.log("Displaying items:", items); // Log items before rendering
   const itemList = document.getElementById("itemList");
   itemList.innerHTML = "";
 
   items.forEach((item, index) => {
+    console.log(`Rendering item: ${item.name}`); // Log each item
     const listItem = document.createElement("li");
     listItem.textContent = `${index + 1}. ${item.name}`;
     itemList.appendChild(listItem);
@@ -188,11 +195,13 @@ function displayItems() {
 async function syncDataToFirebase() {
   try {
     const unsyncedItems = await getFromIndexedDB();
+    console.log("Unsynced items from IndexedDB:", unsyncedItems); // Log unsynced items
 
     for (const item of unsyncedItems) {
       if (!item.synced) {
         const docRef = await addDoc(itemsCollection, { name: item.name });
-        console.log("Item synced to Firebase:", docRef.id);
+        console.log("Synced item to Firebase:", { id: docRef.id, ...item });
+
         item.synced = true;
         item.id = docRef.id;
         saveToIndexedDB(item);
@@ -211,11 +220,12 @@ async function loadItemsFromFirestore() {
   try {
     const querySnapshot = await getDocs(itemsCollection);
     items = querySnapshot.docs.map((doc) => ({ id: doc.id, name: doc.data().name, synced: true }));
+    console.log("Items loaded from Firestore:", items); // Log Firestore data
     displayItems();
 
-    // Save items to IndexedDB
     for (const item of items) {
       saveToIndexedDB(item);
+      console.log("Saved Firestore item to IndexedDB:", item); // Log IndexedDB save
     }
   } catch (error) {
     console.error("Error loading items from Firestore:", error);
