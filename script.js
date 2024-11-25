@@ -1,10 +1,10 @@
 // Import Firebase functions
 import { initializeApp } from "firebase/app";
-import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from "firebase/firestore";
+import { getFirestore, collection, addDoc, getDocs } from "firebase/firestore";
 import {
   getAuth,
-  createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
 } from "firebase/auth";
@@ -17,7 +17,7 @@ const firebaseConfig = {
   storageBucket: "indedfirebaseassignment.appspot.com",
   messagingSenderId: "297837698432",
   appId: "1:297837698432:web:49e7ede0aa4c474ba87565",
-  measurementId: "G-9CG1PL1ZR7"
+  measurementId: "G-9CG1PL1ZR7",
 };
 
 // Initialize Firebase
@@ -56,14 +56,14 @@ onAuthStateChanged(auth, (user) => {
 
 // Show Notifications
 function showNotification(message, type = "success", duration = 3000) {
-    const notificationBar = document.getElementById("notification-bar");
-    notificationBar.textContent = message;
-    notificationBar.className = type; // Add 'success' or 'error' class
-    notificationBar.style.display = "block";
+  const notificationBar = document.getElementById("notification-bar");
+  notificationBar.textContent = message;
+  notificationBar.className = type; // Add 'success' or 'error' class
+  notificationBar.style.display = "block";
 
-    setTimeout(() => {
-        notificationBar.style.display = "none";
-    }, duration);
+  setTimeout(() => {
+    notificationBar.style.display = "none";
+  }, duration);
 }
 
 // Sign-up
@@ -73,11 +73,11 @@ document.getElementById("sign-up-btn").addEventListener("click", async () => {
 
   try {
     await createUserWithEmailAndPassword(auth, email, password);
-    alert("Sign-up successful! Please log in.");
+    showNotification("Sign-up successful! Please log in.", "success");
     signInForm.style.display = "block";
     signUpForm.style.display = "none";
   } catch (error) {
-    alert(`Sign-up failed: ${error.message}`);
+    showNotification(`Sign-up failed: ${error.message}`, "error");
   }
 });
 
@@ -88,9 +88,9 @@ document.getElementById("sign-in-btn").addEventListener("click", async () => {
 
   try {
     await signInWithEmailAndPassword(auth, email, password);
-    alert("Sign-in successful!");
+    showNotification("Sign-in successful!", "success");
   } catch (error) {
-    alert(`Sign-in failed: ${error.message}`);
+    showNotification(`Sign-in failed: ${error.message}`, "error");
   }
 });
 
@@ -98,9 +98,9 @@ document.getElementById("sign-in-btn").addEventListener("click", async () => {
 logoutBtn.addEventListener("click", async () => {
   try {
     await signOut(auth);
-    alert("Logged out successfully!");
+    showNotification("Logged out successfully!", "success");
   } catch (error) {
-    alert(`Logout failed: ${error.message}`);
+    showNotification(`Logout failed: ${error.message}`, "error");
   }
 });
 
@@ -128,7 +128,7 @@ initIndexedDB();
 const saveToIndexedDB = (item) => {
   const transaction = db.transaction("items", "readwrite");
   const store = transaction.objectStore("items");
-  store.put(item); // Add or update item
+  store.put(item);
 };
 
 const getFromIndexedDB = () => {
@@ -152,15 +152,15 @@ document.getElementById("addItemButton").addEventListener("click", async functio
       try {
         const docRef = await addDoc(itemsCollection, { name: itemName });
         console.log("Item saved to Firebase:", docRef.id);
-        newItem.id = docRef.id; // Use Firebase ID
+        newItem.id = docRef.id;
         newItem.synced = true;
       } catch (error) {
         console.error("Error saving to Firebase:", error);
-        newItem.synced = false; // Mark as unsynced
+        newItem.synced = false;
       }
     } else {
       console.log("App is offline. Saving item locally.");
-      newItem.synced = false; // Mark as unsynced
+      newItem.synced = false;
     }
 
     saveToIndexedDB(newItem);
@@ -168,7 +168,7 @@ document.getElementById("addItemButton").addEventListener("click", async functio
     displayItems();
     itemInput.value = "";
   } else {
-    alert("Please enter an item name.");
+    showNotification("Please enter an item name.", "error");
   }
 });
 
@@ -186,7 +186,6 @@ function displayItems() {
 
 // Synchronize IndexedDB Data with Firebase
 async function syncDataToFirebase() {
-  console.log("Syncing unsynced data to Firebase...");
   try {
     const unsyncedItems = await getFromIndexedDB();
 
@@ -194,17 +193,15 @@ async function syncDataToFirebase() {
       if (!item.synced) {
         const docRef = await addDoc(itemsCollection, { name: item.name });
         console.log("Item synced to Firebase:", docRef.id);
-
-        // Update the item in IndexedDB to mark it as synced
         item.synced = true;
-        item.id = docRef.id; // Use Firebase ID
+        item.id = docRef.id;
         saveToIndexedDB(item);
       }
     }
 
     showNotification("Offline data synced successfully!", "success");
   } catch (error) {
-    console.error("Error syncing item to Firebase:", error);
+    console.error("Error syncing data to Firebase:", error);
     showNotification("Failed to sync offline data.", "error");
   }
 }
@@ -232,16 +229,16 @@ window.addEventListener("offline", () => {
 });
 
 function updateOnlineStatus() {
-    const statusIndicator = document.getElementById("status-indicator");
-    if (navigator.onLine) {
-        statusIndicator.classList.remove("offline");
-        statusIndicator.classList.add("online");
-        showNotification("You are online", "success", 2000);
-    } else {
-        statusIndicator.classList.remove("online");
-        statusIndicator.classList.add("offline");
-        showNotification("You are offline. Data will sync when reconnected.", "error", 3000);
-    }
+  const statusIndicator = document.getElementById("status-indicator");
+  if (navigator.onLine) {
+    statusIndicator.classList.remove("offline");
+    statusIndicator.classList.add("online");
+    showNotification("You are online", "success", 2000);
+  } else {
+    statusIndicator.classList.remove("online");
+    statusIndicator.classList.add("offline");
+    showNotification("You are offline. Data will sync when reconnected.", "error", 3000);
+  }
 }
 
 window.addEventListener("online", updateOnlineStatus);
