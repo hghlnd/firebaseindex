@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Check Your Pockets</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('service-worker.js')
+                .then(reg => console.log('Service Worker registered:', reg))
+                .catch(err => console.error('Service Worker registration failed:', err));
+            });
+        }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1>Check Your Pockets</h1>
+        <p>A simple app to help you keep track of your belongings.</p>
+        <input type="text" id="itemInput" placeholder="Enter item name (e.g., Wallet)">
+        <button id="addItemButton" class="button">
+            <img src="add_item_icon.png" alt="Add Item Icon" width="20" height="20"> Add Item
+        </button>
+        <ul id="itemList"></ul>
+        <label for="reminderInterval">Reminder Interval (minutes):</label>
+        <input type="number" id="reminderInterval" min="1" value="10">
+        <button id="setReminderButton" class="button">
+            <img src="set_reminder_icon.png" alt="Set Reminder Icon" width="20" height="20"> Set Reminder
+        </button>
+        <button id="clearItemsButton" class="button">
+            <img src="clear_items_icon.png" alt="Clear Items Icon" width="20" height="20"> Clear Items
+        </button>
+        <button id="installButton" class="button" style="display: none;">
+            <img src="install_app_icon.png" alt="Install App Icon" width="20" height="20"> Install App
+        </button>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
+

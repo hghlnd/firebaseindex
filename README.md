@@ -1,1 +1,1 @@
-# firebaseindex
+The app is supposed to be a catalog of your items that you keep on hand. You catalog your items and the last location you had them. The app will periodically remind you to do an inventory check to help you from losing your items
