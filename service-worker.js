@@ -14,13 +14,27 @@ const urlsToCache = [
 ];
 
 // Cache essential resources
-self.addEventListener('install', (event) => {
+self.addEventListener('install', async (event) => {
     event.waitUntil(
-        caches.open(CACHE_NAME).then((cache) => {
-            return cache.addAll(urlsToCache);
-        })
+        (async () => {
+            const cache = await caches.open(CACHE_NAME);
+            try {
+                await Promise.all(
+                    urlsToCache.map(async (url) => {
+                        const response = await fetch(url);
+                        if (!response.ok) {
+                            throw new Error(`Failed to fetch ${url}: ${response.status}`);
+                        }
+                        await cache.put(url, response.clone());
+                        console.log(`Cached: ${url}`);
+                    })
+                );
+                console.log('All resources cached successfully');
+            } catch (error) {
+                console.error('Error caching resources:', error);
+            }
+        })()
     );
-    console.log('Service Worker installed and resources cached');
 });
 
 // Serve cached files or fetch from network
@@ -43,6 +57,7 @@ self.addEventListener('activate', (event) => {
             return Promise.all(
                 cacheNames.map((cacheName) => {
                     if (cacheName !== CACHE_NAME) {
+                        console.log(`Deleting old cache: ${cacheName}`);
                         return caches.delete(cacheName);
                     }
                 })
@@ -52,75 +67,10 @@ self.addEventListener('activate', (event) => {
     console.log('Service Worker activated and old caches cleaned');
 });
 
-// Handle background sync
+// Sync offline data with Firebase
 self.addEventListener('sync', (event) => {
     if (event.tag === 'sync-data') {
         event.waitUntil(syncDataToFirebase());
     }
 });
 
-// Utility to show notifications
-function showNotification(message, type = 'success') {
-    self.registration.showNotification('Check Your Pockets', {
-        body: message,
-        icon: '/add_item_icon.png',
-        badge: '/add_item_icon.png',
-        vibrate: [200, 100, 200],
-        tag: type,
-    });
-}
-
-// Sync offline data with Firebase
-async function syncDataToFirebase() {
-    console.log('Syncing unsynced data to Firebase...');
-    try {
-        // Open IndexedDB
-        const db = await openIndexedDB();
-        const transaction = db.transaction('items', 'readonly');
-        const store = transaction.objectStore('items');
-        const items = await getAllItems(store);
-
-        // Sync unsynced items
-        for (const item of items) {
-            if (!item.synced) {
-                try {
-                    // Send item to Firebase
-                    const docRef = await addDoc(self.itemsCollection, { name: item.name });
-                    console.log('Item synced to Firebase:', docRef.id);
-
-                    // Update item in IndexedDB to mark it as synced
-                    const updateTransaction = db.transaction('items', 'readwrite');
-                    const updateStore = updateTransaction.objectStore('items');
-                    item.id = docRef.id;
-                    item.synced = true;
-                    updateStore.put(item);
-                } catch (error) {
-                    console.error('Error syncing item to Firebase:', error);
-                }
-            }
-        }
-
-        showNotification('Offline data synced successfully!', 'success');
-    } catch (error) {
-        console.error('Error syncing data:', error);
-        showNotification('Failed to sync offline data.', 'error');
-    }
-}
-
-// Utility to open IndexedDB
-function openIndexedDB() {
-    return new Promise((resolve, reject) => {
-        const request = indexedDB.open('CheckYourPocketsDB', 1);
-        request.onsuccess = (event) => resolve(event.target.result);
-        request.onerror = (event) => reject(event.target.errorCode);
-    });
-}
-
-// Utility to get all items from IndexedDB
-function getAllItems(store) {
-    return new Promise((resolve, reject) => {
-        const request = store.getAll();
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = (event) => reject(event.target.errorCode);
-    });
-}
