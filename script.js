@@ -54,7 +54,7 @@ onAuthStateChanged(auth, (user) => {
   }
 });
 
-// Sign-up 
+// Sign-up
 document.getElementById("sign-up-btn").addEventListener("click", async () => {
   const email = document.getElementById("sign-up-email").value.trim();
   const password = document.getElementById("sign-up-password").value.trim();
@@ -69,7 +69,7 @@ document.getElementById("sign-up-btn").addEventListener("click", async () => {
   }
 });
 
-// Sign-in 
+// Sign-in
 document.getElementById("sign-in-btn").addEventListener("click", async () => {
   const email = document.getElementById("sign-in-email").value.trim();
   const password = document.getElementById("sign-in-password").value.trim();
@@ -82,7 +82,7 @@ document.getElementById("sign-in-btn").addEventListener("click", async () => {
   }
 });
 
-// Logout 
+// Logout
 logoutBtn.addEventListener("click", async () => {
   try {
     await signOut(auth);
@@ -92,95 +92,132 @@ logoutBtn.addEventListener("click", async () => {
   }
 });
 
-// Add item button event listener
-document.getElementById("addItemButton").addEventListener("click", async function () {
-  let itemInput = document.getElementById("itemInput");
-  let itemName = itemInput.value.trim();
-  if (itemName !== "") {
-    const newItem = { name: itemName };
-    try {
-      const docRef = await addDoc(itemsCollection, newItem);
-      items.push({ id: docRef.id, ...newItem });
-      displayItems();
-      itemInput.value = "";
-    } catch (error) {
-      console.error("Error adding item to Firestore:", error);
-      alert("Failed to add item. Please try again.");
+// IndexedDB Setup
+const dbName = "CheckYourPocketsDB";
+let db;
+
+// Initialize IndexedDB
+const initIndexedDB = () => {
+  const request = indexedDB.open(dbName, 1);
+  request.onupgradeneeded = (event) => {
+    db = event.target.result;
+    if (!db.objectStoreNames.contains("items")) {
+      db.createObjectStore("items", { keyPath: "id" });
     }
+  };
+  request.onsuccess = (event) => {
+    db = event.target.result;
+  };
+  request.onerror = (event) => console.error("IndexedDB Error:", event.target.errorCode);
+};
+initIndexedDB();
+
+// IndexedDB CRUD Functions
+const saveToIndexedDB = (item) => {
+  const transaction = db.transaction("items", "readwrite");
+  const store = transaction.objectStore("items");
+  store.put(item); // Add or update item
+};
+
+const getFromIndexedDB = () => {
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction("items", "readonly");
+    const store = transaction.objectStore("items");
+    const request = store.getAll();
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = (event) => reject(event.target.error);
+  });
+};
+
+// Add item
+document.getElementById("addItemButton").addEventListener("click", async function () {
+  const itemInput = document.getElementById("itemInput");
+  const itemName = itemInput.value.trim();
+  if (itemName !== "") {
+    const newItem = { id: Date.now(), name: itemName, synced: navigator.onLine };
+
+    if (navigator.onLine) {
+      try {
+        const docRef = await addDoc(itemsCollection, { name: itemName });
+        console.log("Item saved to Firebase:", docRef.id);
+        newItem.id = docRef.id; // Use Firebase ID
+        newItem.synced = true;
+      } catch (error) {
+        console.error("Error saving to Firebase:", error);
+        newItem.synced = false; // Mark as unsynced
+      }
+    } else {
+      console.log("App is offline. Saving item locally.");
+      newItem.synced = false; // Mark as unsynced
+    }
+
+    saveToIndexedDB(newItem);
+    items.push(newItem);
+    displayItems();
+    itemInput.value = "";
   } else {
-    alert('Please enter an item name');
+    alert("Please enter an item name.");
   }
 });
 
 // Display items in the UI
 function displayItems() {
-  let itemList = document.getElementById('itemList');
-  itemList.innerHTML = '';
+  const itemList = document.getElementById("itemList");
+  itemList.innerHTML = "";
+
   items.forEach((item, index) => {
-    let listItem = document.createElement('li');
+    const listItem = document.createElement("li");
     listItem.textContent = `${index + 1}. ${item.name}`;
     itemList.appendChild(listItem);
   });
+}
+
+// Synchronize IndexedDB Data with Firebase
+async function syncDataToFirebase() {
+  console.log("Syncing unsynced data to Firebase...");
+  const unsyncedItems = await getFromIndexedDB();
+
+  for (const item of unsyncedItems) {
+    if (!item.synced) {
+      try {
+        const docRef = await addDoc(itemsCollection, { name: item.name });
+        console.log("Item synced to Firebase:", docRef.id);
+
+        // Update the item in IndexedDB to mark it as synced
+        item.synced = true;
+        item.id = docRef.id; // Use Firebase ID
+        saveToIndexedDB(item);
+      } catch (error) {
+        console.error("Error syncing item to Firebase:", error);
+      }
+    }
+  }
+
+  // Load all items from Firebase into the app
+  await loadItemsFromFirestore();
 }
 
 // Load items from Firestore
 async function loadItemsFromFirestore() {
   try {
     const querySnapshot = await getDocs(itemsCollection);
-    items = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    items = querySnapshot.docs.map((doc) => ({ id: doc.id, name: doc.data().name, synced: true }));
     displayItems();
+
+    // Save items to IndexedDB
+    for (const item of items) {
+      saveToIndexedDB(item);
+    }
   } catch (error) {
     console.error("Error loading items from Firestore:", error);
   }
 }
 
-// Set reminder button event listener
-document.getElementById("setReminderButton").addEventListener("click", function () {
-  let intervalInput = document.getElementById("reminderInterval").value;
-  let interval = parseInt(intervalInput) * 60 * 1000;
-  if (interval > 0) {
-    if (reminderIntervalId) clearInterval(reminderIntervalId);
-    reminderIntervalId = setInterval(function () {
-      alert(`Check your pockets! Make sure you have your: ${items.map(item => item.name).join(', ')}`);
-    }, interval);
-    alert(`Reminder set for every ${intervalInput} minutes.`);
-  } else {
-    alert('Please enter a valid time interval.');
-  }
+// Detect Online/Offline Status
+window.addEventListener("online", syncDataToFirebase);
+window.addEventListener("offline", () => {
+  console.log("App is offline. Any new data will be saved locally.");
 });
 
-// Install button event listener
-let deferredPrompt;
-window.addEventListener('beforeinstallprompt', (e) => {
-  e.preventDefault();
-  deferredPrompt = e;
-  document.getElementById('installButton').style.display = 'block';
-});
-
-document.getElementById('installButton').addEventListener('click', async () => {
-  if (deferredPrompt) {
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === 'accepted') {
-      document.getElementById('installButton').style.display = 'none';
-    }
-    deferredPrompt = null;
-  }
-});
-
-// Clear items button event listener
-document.getElementById("clearItemsButton").addEventListener("click", async function () {
-  if (confirm("Are you sure you want to clear all items?")) {
-    try {
-      const promises = items.map(item => deleteDoc(doc(db, "items", item.id)));
-      await Promise.all(promises);
-      items = [];
-      displayItems();
-    } catch (error) {
-      console.error("Error clearing items from Firestore:", error);
-      alert("Failed to clear items. Please try again.");
-    }
-  }
-});
 
 
