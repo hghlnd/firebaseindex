@@ -1,5 +1,5 @@
 // Import Firebase functions
-import { getFirestore, collection, addDoc, getDocs } from "firebase/firestore";
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc } from "firebase/firestore";
 import { auth, db } from "./firebaseConfig.js"; // Import from firebaseConfig.js
 
 // Collection for items
@@ -58,6 +58,56 @@ document.getElementById("addItemButton").addEventListener("click", async functio
   }
 });
 
+// Delete item
+async function deleteItem(itemId) {
+  const index = items.findIndex((item) => item.id === itemId);
+
+  if (index !== -1) {
+    const item = items[index];
+
+    if (navigator.onLine) {
+      try {
+        await deleteDoc(doc(db, "items", itemId));
+        console.log("Item deleted from Firebase:", itemId);
+      } catch (error) {
+        console.error("Error deleting item from Firebase:", error);
+        showNotification("Failed to delete item from Firebase.", "error");
+        return;
+      }
+    }
+
+    removeFromIndexedDB(itemId);
+    items.splice(index, 1);
+    displayItems();
+    showNotification("Item deleted successfully.", "success");
+  }
+}
+
+// Update item
+async function updateItem(itemId, newName) {
+  const index = items.findIndex((item) => item.id === itemId);
+
+  if (index !== -1) {
+    const item = items[index];
+    item.name = newName;
+
+    if (navigator.onLine) {
+      try {
+        await updateDoc(doc(db, "items", itemId), { name: newName });
+        console.log("Item updated in Firebase:", itemId);
+      } catch (error) {
+        console.error("Error updating item in Firebase:", error);
+        showNotification("Failed to update item in Firebase.", "error");
+        return;
+      }
+    }
+
+    saveToIndexedDB(item);
+    displayItems();
+    showNotification("Item updated successfully.", "success");
+  }
+}
+
 // Display items in the UI
 function displayItems() {
   const itemList = document.getElementById("itemList");
@@ -65,8 +115,21 @@ function displayItems() {
 
   items.forEach((item, index) => {
     const listItem = document.createElement("li");
-    listItem.textContent = `${index + 1}. ${item.name}`;
+    listItem.innerHTML = `
+      ${index + 1}. ${item.name} 
+      <button class="button delete-btn" data-id="${item.id}">Delete</button>
+      <button class="button edit-btn" data-id="${item.id}">Edit</button>
+    `;
     itemList.appendChild(listItem);
+
+    // Add delete event listener
+    listItem.querySelector(".delete-btn").addEventListener("click", () => deleteItem(item.id));
+
+    // Add edit event listener
+    listItem.querySelector(".edit-btn").addEventListener("click", () => {
+      const newName = prompt("Enter the new name for the item:", item.name);
+      if (newName) updateItem(item.id, newName.trim());
+    });
   });
 }
 
@@ -96,7 +159,11 @@ async function syncDataToFirebase() {
 async function loadItemsFromFirestore() {
   try {
     const querySnapshot = await getDocs(itemsCollection);
-    items = querySnapshot.docs.map((doc) => ({ id: doc.id, name: doc.data().name, synced: true }));
+    items = querySnapshot.docs.map((doc) => ({
+      id: doc.id,
+      name: doc.data().name,
+      synced: true,
+    }));
     displayItems();
 
     // Save items to IndexedDB
@@ -130,3 +197,8 @@ function updateOnlineStatus() {
 window.addEventListener("online", updateOnlineStatus);
 window.addEventListener("offline", updateOnlineStatus);
 updateOnlineStatus(); // Initial check
+
+// Initialize app on DOMContentLoaded
+document.addEventListener("DOMContentLoaded", async () => {
+  await loadItemsFromFirestore();
+});
