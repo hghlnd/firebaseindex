@@ -78,8 +78,8 @@ async function syncOfflineData() {
 
     for (const item of unsyncedItems) {
       try {
-        // Save item to Firebase (you need a Firebase function here)
-        const docRef = await addDocToFirebase(item); // Replace with your Firebase add function
+        // Save item to Firebase (replace this with your actual Firebase function)
+        const docRef = await addDoc(collection(db, "items"), { name: item.name }); 
         console.log('Item synced to Firebase:', docRef.id);
 
         // Mark the item as synced in IndexedDB
