@@ -1,5 +1,5 @@
 // Import Firebase functions
-import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc } from "firebase/firestore";
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 import { auth, db } from "./firebaseConfig.js"; // Import from firebaseConfig.js
 
 // Collection for items
