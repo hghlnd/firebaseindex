@@ -1,4 +1,4 @@
-const CACHE_NAME = 'check-your-pockets-cache-v2';
+const CACHE_NAME = 'check-your-pockets-cache-v3'; // Updated cache version
 const urlsToCache = [
   './',
   './index.html',
@@ -28,13 +28,16 @@ self.addEventListener('install', (event) => {
 self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.match(event.request).then((response) => {
-      // Return cached response if found, otherwise fetch from network
-      return response || fetch(event.request).catch(() => {
-        // Fallback for navigation requests
-        if (event.request.mode === 'navigate') {
-          return caches.match('./index.html');
-        }
+      return response || fetch(event.request).then((fetchResponse) => {
+        return caches.open(CACHE_NAME).then((cache) => {
+          cache.put(event.request, fetchResponse.clone());
+          return fetchResponse;
+        });
       });
+    }).catch(() => {
+      if (event.request.mode === 'navigate') {
+        return caches.match('./index.html');
+      }
     })
   );
 });
